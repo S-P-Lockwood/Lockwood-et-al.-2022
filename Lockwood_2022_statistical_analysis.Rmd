@@ -1,0 +1,1177 @@
+---
+title: "Shannon diversity"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r load packages}
+library("vegan")
+library("forcats")
+library("dplyr")
+library("plyr")
+library("ggpubr")
+library("tidyr")
+library("Rmisc")
+library("phyloseq")
+```
+
+
+#Shannon diversity for databases - Supporting statistics for Figure 2
+```{r}
+#Load in taxa info
+all.nr <- read.csv(file="*/shannon_diversity/nr_taxa_full.csv", header = TRUE, row.names = 1, na.strings = "unclassified", fileEncoding="UTF-8-BOM", check.names = FALSE)
+all.redun <- read.csv(file="*/shannon_diversity/redun_taxa_full.csv", header = TRUE, row.names = 1, na.strings = "unclassified", fileEncoding="UTF-8-BOM", check.names = FALSE)
+
+marine.nr <- read.csv(file="*/shannon_diversity/mar_nr_taxa_full.csv", header = TRUE, row.names = 1, na.strings = "unclassified", fileEncoding="UTF-8-BOM", check.names = FALSE)
+marine.redundant <- read.csv(file="*/shannon_diversity/mar_redun_taxa_full.csv", header = TRUE, row.names = 1, na.strings = "unclassified", fileEncoding="UTF-8-BOM", check.names = FALSE)
+
+
+#Subset based on gene
+#Gene IDs: pepM, aepY, phpC, mpnS, hepD, palA, phnA, phnW, phnX, phnY, phnZ, phnI, phnJ, phnM
+diversity.stats <- select(all.nr, aepY)
+
+#Shannon diversity
+H <- diversity(diversity.stats, index = "shannon", MARGIN = 1, base = exp(1))
+H
+
+#Evenness
+#119 is the total number of taxa across all databases
+s <- 119-sum(diversity.stats==0)
+
+H/log(s)
+```
+
+#ANOVA for TARA BLAST results - Supporting statistics for Figure 4
+```{r Import data using phyloseq}
+#OTU table
+tara.otu.csv <- read.csv(file="*/tara_data/tara_otu.csv", header = TRUE, na.strings = "unclassified", fileEncoding="UTF-8-BOM", check.names = FALSE)
+tara.otu <- as.matrix(tara.otu.csv)
+rownames(tara.otu) <- paste0(1:nrow(tara.otu))
+tara.otu <- otu_table(tara.otu, taxa_are_rows = TRUE)
+
+#Taxa table
+tara.taxa.csv <- read.csv(file="*/tara_data/tara_taxa.csv", header = TRUE, na.strings = "unclassified", fileEncoding="UTF-8-BOM", check.names = FALSE)
+tara.taxa <- as.matrix(tara.taxa.csv)
+rownames(tara.taxa) <- paste0(1:nrow(tara.taxa))
+tara.taxa1 <- tax_table(tara.taxa)
+
+#Meta-data
+tara.sample.meta <- read.csv(file="*/tara_data/tara_meta.csv", header = TRUE, fileEncoding="UTF-8-BOM", check.names = FALSE)
+tara.meta <- as.data.frame(tara.sample.meta)
+tara.meta11 <- tara.meta[,-1]
+rownames(tara.meta11) <- tara.meta$Sample_ID
+tara.meta.1 <- sample_data(tara.meta11)
+
+#Create phyloseq object abundance
+tara.abu <- phyloseq(tara.otu, tara.taxa1, tara.meta.1)
+
+#Melt phyloseq object for figure-making df
+tara.full <- psmelt(tara.abu)
+```
+
+```{r Data prep (subsetting comparisons)}
+#############
+### DEPTH ###
+#############
+
+#Subset regions
+tara.anova <- subset(tara.full, Location != "MED")
+med.anova <- subset(tara.full, Location == "MED")
+
+
+tara.sur <- subset(tara.anova, Depth == "SUR")
+tara.dcm <- subset(tara.anova, Depth == "DCM")
+tara.mes <- subset(tara.anova, Depth == "MES")
+
+med.sur <- subset(med.anova, Depth == "SUR")
+med.dcm <- subset(med.anova, Depth == "DCM")
+
+
+##############
+###  GENE  ###
+##############
+
+#Specific Genes
+tara.pp <- subset(tara.anova, Species=="pepM")
+tara.dd <- subset(tara.anova, Species=="aepY")
+tara.cc <- subset(tara.anova, Species=="phpC")
+tara.nn <- subset(tara.anova, Species=="mpnS")
+tara.hh <- subset(tara.anova, Species=="hepD")
+
+tara.ww <- subset(tara.anova, Species=="phnW")
+tara.aa <- subset(tara.anova, Species=="phnA")
+tara.yy <- subset(tara.anova, Species=="phnY")
+tara.xx <- subset(tara.anova, Species=="phnX")
+tara.zz <- subset(tara.anova, Species=="phnZ")
+tara.ll <- subset(tara.anova, Species=="palA")
+
+tara.ii <- subset(tara.anova, Species=="phnI")
+tara.jj <- subset(tara.anova, Species=="phnJ")
+tara.mm <- subset(tara.anova, Species=="phnM")
+
+med.pp <- subset(med.anova, Species=="pepM")
+med.dd <- subset(med.anova, Species=="aepY")
+med.cc <- subset(med.anova, Species=="phpC")
+med.nn <- subset(med.anova, Species=="mpnS")
+med.hh <- subset(med.anova, Species=="hepD")
+
+med.ww <- subset(med.anova, Species=="phnW")
+med.aa <- subset(med.anova, Species=="phnA")
+med.yy <- subset(med.anova, Species=="phnY")
+med.xx <- subset(med.anova, Species=="phnX")
+med.zz <- subset(med.anova, Species=="phnZ")
+med.ll <- subset(med.anova, Species=="palA")
+
+med.ii <- subset(med.anova, Species=="phnI")
+med.jj <- subset(med.anova, Species=="phnJ")
+med.mm <- subset(med.anova, Species=="phnM")
+
+
+##############
+##  REGION  ##
+##############
+
+tara.full$MED <- ifelse(tara.full$Location == "MED", "yes", "no")
+
+region.sur <- subset(tara.full, Depth == "SUR")
+region.dcm <- subset(tara.full, Depth == "DCM")
+
+
+surr.pp <- subset(region.sur, Species=="pepM")
+surr.dd <- subset(region.sur, Species=="aepY")
+surr.cc <- subset(region.sur, Species=="phpC")
+surr.nn <- subset(region.sur, Species=="mpnS")
+surr.hh <- subset(region.sur, Species=="hepD")
+
+surr.ww <- subset(region.sur, Species=="phnW")
+surr.aa <- subset(region.sur, Species=="phnA")
+surr.yy <- subset(region.sur, Species=="phnY")
+surr.xx <- subset(region.sur, Species=="phnX")
+surr.zz <- subset(region.sur, Species=="phnZ")
+surr.ll <- subset(region.sur, Species=="palA")
+
+surr.ii <- subset(region.sur, Species=="phnI")
+surr.jj <- subset(region.sur, Species=="phnJ")
+surr.mm <- subset(region.sur, Species=="phnM")
+
+
+dccm.pp <- subset(region.dcm, Species=="pepM")
+dccm.dd <- subset(region.dcm, Species=="aepY")
+dccm.cc <- subset(region.dcm, Species=="phpC")
+dccm.nn <- subset(region.dcm, Species=="mpnS")
+dccm.hh <- subset(region.dcm, Species=="hepD")
+
+dccm.ww <- subset(region.dcm, Species=="phnW")
+dccm.aa <- subset(region.dcm, Species=="phnA")
+dccm.yy <- subset(region.dcm, Species=="phnY")
+dccm.xx <- subset(region.dcm, Species=="phnX")
+dccm.zz <- subset(region.dcm, Species=="phnZ")
+dccm.ll <- subset(region.dcm, Species=="palA")
+
+dccm.ii <- subset(region.dcm, Species=="phnI")
+dccm.jj <- subset(region.dcm, Species=="phnJ")
+dccm.mm <- subset(region.dcm, Species=="phnM")
+```
+
+```{r ANOVA - Between genes at specific depths/location (1-5)}
+##############
+### GLOBAL ###
+##############
+# Surface #
+
+#ANOVA
+tara.sur.av <- aov(Abundance~Species, data = tara.sur)
+capture.output(summary(tara.sur.av), file = "*/TARA_anova/1-5/global_sur_av.txt")
+
+#Tukey HSD
+tara.sur.tk <- TukeyHSD(tara.sur.av)
+capture.output(print(tara.sur.tk), file = "*/TARA_anova/1-5/global_sur_tk.txt")
+
+
+# DCM #
+#ANOVA
+tara.dcm.av <- aov(Abundance~Species, data = tara.dcm)
+capture.output(summary(tara.dcm.av), file = "*/TARA_anova/1-5/global_dcm_av.txt")
+
+#Tukey HSD
+tara.dcm.tk <- TukeyHSD(tara.dcm.av)
+capture.output(print(tara.dcm.tk), file = "*/TARA_anova/1-5/global_dcm_tk.txt")
+
+
+# MES #
+#ANOVA
+tara.mes.av <- aov(Abundance~Species, data = tara.mes)
+capture.output(summary(tara.mes.av), file = "*/TARA_anova/1-5/global_mes_av.txt")
+
+#Tukey HSD
+tara.mes.tk <- TukeyHSD(tara.mes.av)
+capture.output(print(tara.mes.tk), file = "*/TARA_anova/1-5/global_mes_tk.txt")
+
+
+#############
+###  MED  ###
+#############
+# Surface #
+
+#ANOVA
+med.sur.av <- aov(Abundance~Species, data = med.sur)
+capture.output(summary(med.sur.av), file = "*/TARA_anova/1-5/med_sur_av.txt")
+
+#Tukey HSD
+med.sur.tk <- TukeyHSD(med.sur.av)
+capture.output(print(med.sur.tk), file = "*/TARA_anova/1-5/med_sur_tk.txt")
+
+
+# DCM #
+#ANOVA
+med.dcm.av <- aov(Abundance~Species, data = med.dcm)
+capture.output(summary(med.dcm.av), file = "*/TARA_anova/1-5/med_dcm_av.txt")
+
+#Tukey HSD
+med.dcm.tk <- TukeyHSD(med.dcm.av)
+capture.output(print(med.dcm.tk), file = "*/TARA_anova/1-5/med_dcm_tk.txt")
+```
+
+
+
+```{r ANOVA - Specific gene between depths at specific location (6-7)}
+##############
+# Production #
+##############
+
+#PEPM
+#ANOVA
+global.pp.av <- aov(Abundance~Depth, data = tara.pp)
+capture.output(summary(global.pp.av), file = "*/TARA_anova/6-7/global_01_av.txt")
+
+#Tukey HSD
+global.pp.tk <- TukeyHSD(global.pp.av)
+capture.output(print(global.pp.tk), file = "*/TARA_anova/6-7/global_01_tk.txt")
+
+
+#ANOVA
+med.pp.av <- aov(Abundance~Depth, data = med.pp)
+capture.output(summary(med.pp.av), file = "*/TARA_anova/6-7/med_01_av.txt")
+
+#Tukey HSD
+med.pp.tk <- TukeyHSD(med.pp.av)
+capture.output(print(med.pp.tk), file = "*/TARA_anova/6-7/med_01_tk.txt")
+
+
+#AEPY
+#ANOVA
+global.dd.av <- aov(Abundance~Depth, data = tara.dd)
+capture.output(summary(global.dd.av), file = "*/TARA_anova/6-7/global_02_av.txt")
+
+#Tukey HSD
+global.dd.tk <- TukeyHSD(global.dd.av)
+capture.output(print(global.dd.tk), file = "*/TARA_anova/6-7/global_02_tk.txt")
+
+
+#ANOVA
+med.dd.av <- aov(Abundance~Depth, data = med.dd)
+capture.output(summary(med.dd.av), file = "*/TARA_anova/6-7/med_02_av.txt")
+
+#Tukey HSD
+med.dd.tk <- TukeyHSD(med.dd.av)
+capture.output(print(med.dd.tk), file = "*/TARA_anova/6-7/med_02_tk.txt")
+
+
+#PHPC
+#ANOVA
+global.cc.av <- aov(Abundance~Depth, data = tara.cc)
+capture.output(summary(global.cc.av), file = "*/TARA_anova/6-7/global_03_av.txt")
+
+#Tukey HSD
+global.cc.tk <- TukeyHSD(global.cc.av)
+capture.output(print(global.cc.tk), file = "*/TARA_anova/6-7/global_03_tk.txt")
+
+
+#ANOVA
+med.cc.av <- aov(Abundance~Depth, data = med.cc)
+capture.output(summary(med.cc.av), file = "*/TARA_anova/6-7/med_03_av.txt")
+
+#Tukey HSD
+med.cc.tk <- TukeyHSD(med.cc.av)
+capture.output(print(med.cc.tk), file = "*/TARA_anova/6-7/med_03_tk.txt")
+
+
+#MPNS
+#ANOVA
+global.nn.av <- aov(Abundance~Depth, data = tara.nn)
+capture.output(summary(global.nn.av), file = "*/TARA_anova/6-7/global_04_av.txt")
+
+#Tukey HSD
+global.nn.tk <- TukeyHSD(global.nn.av)
+capture.output(print(global.nn.tk), file = "*/TARA_anova/6-7/global_04_tk.txt")
+
+
+#ANOVA
+med.nn.av <- aov(Abundance~Depth, data = med.nn)
+capture.output(summary(med.nn.av), file = "*/TARA_anova/6-7/med_04_av.txt")
+
+#Tukey HSD
+med.nn.tk <- TukeyHSD(med.nn.av)
+capture.output(print(med.nn.tk), file = "*/TARA_anova/6-7/med_04_tk.txt")
+
+
+#HEPD
+#ANOVA
+global.hh.av <- aov(Abundance~Depth, data = tara.hh)
+capture.output(summary(global.hh.av), file = "*/TARA_anova/6-7/global_05_av.txt")
+
+#Tukey HSD
+global.hh.tk <- TukeyHSD(global.hh.av)
+capture.output(print(global.hh.tk), file = "*/TARA_anova/6-7/global_05_tk.txt")
+
+
+#ANOVA
+med.hh.av <- aov(Abundance~Depth, data = med.hh)
+capture.output(summary(med.hh.av), file = "*/TARA_anova/6-7/med_05_av.txt")
+
+#Tukey HSD
+med.hh.tk <- TukeyHSD(med.hh.av)
+capture.output(print(med.hh.tk), file = "*/TARA_anova/6-7/med_05_tk.txt")
+
+
+############
+# Specific #
+############
+
+#PHNW
+#ANOVA
+global.ww.av <- aov(Abundance~Depth, data = tara.ww)
+capture.output(summary(global.ww.av), file = "*/TARA_anova/6-7/global_08_av.txt")
+
+#Tukey HSD
+global.ww.tk <- TukeyHSD(global.ww.av)
+capture.output(print(global.ww.tk), file = "*/TARA_anova/6-7/global_08_tk.txt")
+
+
+#ANOVA
+med.ww.av <- aov(Abundance~Depth, data = med.ww)
+capture.output(summary(med.ww.av), file = "*/TARA_anova/6-7/med_08_av.txt")
+
+#Tukey HSD
+med.ww.tk <- TukeyHSD(med.ww.av)
+capture.output(print(med.ww.tk), file = "*/TARA_anova/6-7/med_08_tk.txt")
+
+
+#PHNA
+#ANOVA
+global.aa.av <- aov(Abundance~Depth, data = tara.aa)
+capture.output(summary(global.aa.av), file = "*/TARA_anova/6-7/global_07_av.txt")
+
+#Tukey HSD
+global.aa.tk <- TukeyHSD(global.aa.av)
+capture.output(print(global.aa.tk), file = "*/TARA_anova/6-7/global_07_tk.txt")
+
+
+#ANOVA
+med.aa.av <- aov(Abundance~Depth, data = med.aa)
+capture.output(summary(med.aa.av), file = "*/TARA_anova/6-7/med_07_av.txt")
+
+#Tukey HSD
+med.aa.tk <- TukeyHSD(med.aa.av)
+capture.output(print(med.aa.tk), file = "*/TARA_anova/6-7/med_07_tk.txt")
+
+
+#PHNY
+#ANOVA
+global.yy.av <- aov(Abundance~Depth, data = tara.yy)
+capture.output(summary(global.yy.av), file = "*/TARA_anova/6-7/global_10_av.txt")
+
+#Tukey HSD
+global.yy.tk <- TukeyHSD(global.yy.av)
+capture.output(print(global.yy.tk), file = "*/TARA_anova/6-7/global_10_tk.txt")
+
+
+#ANOVA
+med.yy.av <- aov(Abundance~Depth, data = med.yy)
+capture.output(summary(med.yy.av), file = "*/TARA_anova/6-7/med_10_av.txt")
+
+#Tukey HSD
+med.yy.tk <- TukeyHSD(med.yy.av)
+capture.output(print(med.yy.tk), file = "*/TARA_anova/6-7/med_10_tk.txt")
+
+
+#PHNX
+#ANOVA
+global.xx.av <- aov(Abundance~Depth, data = tara.xx)
+capture.output(summary(global.xx.av), file = "*/TARA_anova/6-7/global_09_av.txt")
+
+#Tukey HSD
+global.xx.tk <- TukeyHSD(global.xx.av)
+capture.output(print(global.xx.tk), file = "*/TARA_anova/6-7/global_09_tk.txt")
+
+
+#ANOVA
+med.xx.av <- aov(Abundance~Depth, data = med.xx)
+capture.output(summary(med.xx.av), file = "*/TARA_anova/6-7/med_09_av.txt")
+
+#Tukey HSD
+med.xx.tk <- TukeyHSD(med.xx.av)
+capture.output(print(med.xx.tk), file = "*/TARA_anova/6-7/med_09_tk.txt")
+
+
+#PHNZ
+#ANOVA
+global.zz.av <- aov(Abundance~Depth, data = tara.zz)
+capture.output(summary(global.zz.av), file = "*/TARA_anova/6-7/global_11_av.txt")
+
+#Tukey HSD
+global.zz.tk <- TukeyHSD(global.zz.av)
+capture.output(print(global.zz.tk), file = "*/TARA_anova/6-7/global_11_tk.txt")
+
+
+#ANOVA
+med.zz.av <- aov(Abundance~Depth, data = med.zz)
+capture.output(summary(med.zz.av), file = "*/TARA_anova/6-7/med_11_av.txt")
+
+#Tukey HSD
+med.zz.tk <- TukeyHSD(med.zz.av)
+capture.output(print(med.zz.tk), file = "*/TARA_anova/6-7/med_11_tk.txt")
+
+
+#PALA
+#ANOVA
+global.ll.av <- aov(Abundance~Depth, data = tara.ll)
+capture.output(summary(global.ll.av), file = "*/TARA_anova/6-7/global_06_av.txt")
+
+#Tukey HSD
+global.ll.tk <- TukeyHSD(global.ll.av)
+capture.output(print(global.ll.tk), file = "*/TARA_anova/6-7/global_06_tk.txt")
+
+
+#ANOVA
+med.ll.av <- aov(Abundance~Depth, data = med.ll)
+capture.output(summary(med.ll.av), file = "*/TARA_anova/6-7/med_06_av.txt")
+
+#Tukey HSD
+med.ll.tk <- TukeyHSD(med.ll.av)
+capture.output(print(med.ll.tk), file = "*/TARA_anova/6-7/med_06_tk.txt")
+
+
+###########
+# General #
+###########
+
+#PHNI
+#ANOVA
+global.ii.av <- aov(Abundance~Depth, data = tara.ii)
+capture.output(summary(global.ii.av), file = "*/TARA_anova/6-7/global_12_av.txt")
+
+#Tukey HSD
+global.ii.tk <- TukeyHSD(global.ii.av)
+capture.output(print(global.ii.tk), file = "*/TARA_anova/6-7/global_12_tk.txt")
+
+
+#ANOVA
+med.ii.av <- aov(Abundance~Depth, data = med.ii)
+capture.output(summary(med.ii.av), file = "*/TARA_anova/6-7/med_12_av.txt")
+
+#Tukey HSD
+med.ii.tk <- TukeyHSD(med.ii.av)
+capture.output(print(med.ii.tk), file = "*/TARA_anova/6-7/med_12_tk.txt")
+
+
+#PHNJ
+#ANOVA
+global.jj.av <- aov(Abundance~Depth, data = tara.jj)
+capture.output(summary(global.jj.av), file = "*/TARA_anova/6-7/global_13_av.txt")
+
+#Tukey HSD
+global.jj.tk <- TukeyHSD(global.jj.av)
+capture.output(print(global.jj.tk), file = "*/TARA_anova/6-7/global_13_tk.txt")
+
+
+#ANOVA
+med.jj.av <- aov(Abundance~Depth, data = med.jj)
+capture.output(summary(med.jj.av), file = "*/TARA_anova/6-7/med_13_av.txt")
+
+#Tukey HSD
+med.jj.tk <- TukeyHSD(med.jj.av)
+capture.output(print(med.jj.tk), file = "*/TARA_anova/6-7/med_13_tk.txt")
+
+
+#PHNM
+#ANOVA
+global.mm.av <- aov(Abundance~Depth, data = tara.mm)
+capture.output(summary(global.mm.av), file = "*/TARA_anova/6-7/global_14_av.txt")
+
+#Tukey HSD
+global.mm.tk <- TukeyHSD(global.mm.av)
+capture.output(print(global.mm.tk), file = "*/TARA_anova/6-7/global_14_tk.txt")
+
+
+#ANOVA
+med.mm.av <- aov(Abundance~Depth, data = med.mm)
+capture.output(summary(med.mm.av), file = "*/TARA_anova/6-7/med_14_av.txt")
+
+#Tukey HSD
+med.mm.tk <- TukeyHSD(med.mm.av)
+capture.output(print(med.mm.tk), file = "*/TARA_anova/6-7/med_14_tk.txt")
+```
+
+
+
+```{r ANOVA - Global vs MED for specific gene at specific depth (8-9)}
+#### SUR ####
+##############
+# Production #
+##############
+
+#PEPM
+surr.pp.av <- aov(Abundance~MED, data = surr.pp)
+capture.output(summary(surr.pp.av), file = "*/TARA_anova/8-9/surr_01_av.txt")
+
+#AEPY
+surr.dd.av <- aov(Abundance~MED, data = surr.dd)
+capture.output(summary(surr.dd.av), file = "*/TARA_anova/8-9/surr_02_av.txt")
+
+#PHPC
+surr.cc.av <- aov(Abundance~MED, data = surr.cc)
+capture.output(summary(surr.cc.av), file = "*/TARA_anova/8-9/surr_03_av.txt")
+
+#MPNS
+surr.nn.av <- aov(Abundance~MED, data = surr.nn)
+capture.output(summary(surr.nn.av), file = "*/TARA_anova/8-9/surr_04_av.txt")
+
+#HEPD
+surr.hh.av <- aov(Abundance~MED, data = surr.hh)
+capture.output(summary(surr.hh.av), file = "*/TARA_anova/8-9/surr_05_av.txt")
+
+############
+# Specific #
+############
+#PHNW
+surr.ww.av <- aov(Abundance~MED, data = surr.ww)
+capture.output(summary(surr.ww.av), file = "*/TARA_anova/8-9/surr_08_av.txt")
+
+#PHNA
+surr.aa.av <- aov(Abundance~MED, data = surr.aa)
+capture.output(summary(surr.aa.av), file = "*/TARA_anova/8-9/surr_07_av.txt")
+
+#PHNY
+surr.yy.av <- aov(Abundance~MED, data = surr.yy)
+capture.output(summary(surr.yy.av), file = "*/TARA_anova/8-9/surr_10_av.txt")
+
+#PHNX
+surr.xx.av <- aov(Abundance~MED, data = surr.xx)
+capture.output(summary(surr.xx.av), file = "*/TARA_anova/8-9/surr_09_av.txt")
+
+#PHNZ
+surr.zz.av <- aov(Abundance~MED, data = surr.zz)
+capture.output(summary(surr.zz.av), file = "*/TARA_anova/8-9/surr_11_av.txt")
+
+#PALA
+surr.ll.av <- aov(Abundance~MED, data = surr.ll)
+capture.output(summary(surr.ll.av), file = "*/TARA_anova/8-9/surr_06_av.txt")
+
+###########
+# General #
+###########
+#PHNI
+surr.ii.av <- aov(Abundance~MED, data = surr.ii)
+capture.output(summary(surr.ii.av), file = "*/TARA_anova/8-9/surr_12_av.txt")
+
+#PHNJ
+surr.jj.av <- aov(Abundance~MED, data = surr.jj)
+capture.output(summary(surr.jj.av), file = "*/TARA_anova/8-9/surr_13_av.txt")
+
+#PHNM
+surr.mm.av <- aov(Abundance~MED, data = surr.mm)
+capture.output(summary(surr.mm.av), file = "*/TARA_anova/8-9/surr_14_av.txt")
+
+
+
+#### DCM ####
+##############
+# Production #
+##############
+
+#PEPM
+dccm.pp.av <- aov(Abundance~MED, data = dccm.pp)
+capture.output(summary(dccm.pp.av), file = "*/TARA_anova/8-9/dccm_01_av.txt")
+
+#AEPY
+dccm.dd.av <- aov(Abundance~MED, data = dccm.dd)
+capture.output(summary(dccm.dd.av), file = "*/TARA_anova/8-9/dccm_02_av.txt")
+
+#PHPC
+dccm.cc.av <- aov(Abundance~MED, data = dccm.cc)
+capture.output(summary(dccm.cc.av), file = "*/TARA_anova/8-9/dccm_03_av.txt")
+
+#MPNS
+dccm.nn.av <- aov(Abundance~MED, data = dccm.nn)
+capture.output(summary(dccm.nn.av), file = "*/TARA_anova/8-9/dccm_04_av.txt")
+
+#HEPD
+dccm.hh.av <- aov(Abundance~MED, data = dccm.hh)
+capture.output(summary(dccm.hh.av), file = "*/TARA_anova/8-9/dccm_05_av.txt")
+
+#######################
+# Specific Catabolism #
+#######################
+#PHNW
+dccm.ww.av <- aov(Abundance~MED, data = dccm.ww)
+capture.output(summary(dccm.ww.av), file = "*/TARA_anova/8-9/dccm_08_av.txt")
+
+#PHNA
+dccm.aa.av <- aov(Abundance~MED, data = dccm.aa)
+capture.output(summary(dccm.aa.av), file = "*/TARA_anova/8-9/dccm_07_av.txt")
+
+#PHNY
+dccm.yy.av <- aov(Abundance~MED, data = dccm.yy)
+capture.output(summary(dccm.yy.av), file = "*/TARA_anova/8-9/dccm_10_av.txt")
+
+#PHNX
+dccm.xx.av <- aov(Abundance~MED, data = dccm.xx)
+capture.output(summary(dccm.xx.av), file = "*/TARA_anova/8-9/dccm_09_av.txt")
+
+#PHNZ
+dccm.zz.av <- aov(Abundance~MED, data = dccm.zz)
+capture.output(summary(dccm.zz.av), file = "*/TARA_anova/8-9/dccm_11_av.txt")
+
+#PALA
+dccm.ll.av <- aov(Abundance~MED, data = dccm.ll)
+capture.output(summary(dccm.ll.av), file = "*/TARA_anova/8-9/dccm_06_av.txt")
+
+######################
+# General Catabolism #
+######################
+#PHNI
+dccm.ii.av <- aov(Abundance~MED, data = dccm.ii)
+capture.output(summary(dccm.ii.av), file = "*/TARA_anova/8-9/dccm_12_av.txt")
+
+#PHNJ
+dccm.jj.av <- aov(Abundance~MED, data = dccm.jj)
+capture.output(summary(dccm.jj.av), file = "*/TARA_anova/8-9/dccm_13_av.txt")
+
+#PHNM
+dccm.mm.av <- aov(Abundance~MED, data = dccm.mm)
+capture.output(summary(dccm.mm.av), file = "*/TARA_anova/8-9/dccm_14_av.txt")
+```
+
+
+#ANOVA for MOTS BLAST results - Supporting statistics for Figure 5
+```{r Import data using phyloseq}
+#OTU table
+mots.otu.csv <- read.csv(file="*/mots_data/mots_otu.csv", header = TRUE, na.strings = "unclassified", fileEncoding="UTF-8-BOM", check.names = FALSE)
+mots.otu <- as.matrix(mots.otu.csv)
+rownames(mots.otu) <- paste0(1:nrow(mots.otu))
+mots.otu <- otu_table(mots.otu, taxa_are_rows = TRUE)
+
+#Taxa table
+mots.taxa.csv <- read.csv(file="*/mots_data/mots_taxa.csv", header = TRUE, na.strings = "unclassified", fileEncoding="UTF-8-BOM", check.names = FALSE)
+mots.taxa <- as.matrix(mots.taxa.csv)
+rownames(mots.taxa) <- paste0(1:nrow(mots.taxa))
+mots.taxa1 <- tax_table(mots.taxa)
+
+#Meta-data
+mots.sample.meta <- read.csv(file="*/mots_data/mots_meta.csv", header = TRUE, fileEncoding="UTF-8-BOM", check.names = FALSE)
+mots.meta <- as.data.frame(mots.sample.meta)
+mots.meta11 <- mots.meta[,-1]
+rownames(mots.meta11) <- mots.meta$Sample_ID
+mots.meta.1 <- sample_data(mots.meta11)
+
+#fix sample names...........
+sample_names(mots.otu) <- seq(from=1, to=21, by=1)
+sample_names(mots.meta.1) <- seq(from=1, to=21, by=1)
+
+#Create phyloseq object abundance
+mots.abu <- phyloseq(mots.otu, mots.taxa1, mots.meta.1)
+
+#Adjust date order
+sample_data(mots.abu)$Time = factor(sample_data(mots.abu)$Time, levels = c("W '14", "S '14", "W '15", "S '15", "W '16", "S '17", "W '17"))
+
+#Melt phyloseq object for figure-making df
+mots.full <- psmelt(mots.abu)
+```
+
+```{r MOTS ANOVA seasonality set-up}
+#Subset by gene/location
+###STW###
+ano.stw.PEP <- subset(mots.timeline, Location == "STW" & Gene == "pepM")
+ano.stw.AEP <- subset(mots.timeline, Location == "STW" & Gene == "aepY")
+ano.stw.PHP <- subset(mots.timeline, Location == "STW" & Gene == "phpC")
+ano.stw.MP <- subset(mots.timeline, Location == "STW" & Gene == "mpnS")
+ano.stw.HEP <- subset(mots.timeline, Location == "STW" & Gene == "hepD")
+
+ano.stw.A <- subset(mots.timeline, Location == "STW" & Gene == "phnA")
+ano.stw.W <- subset(mots.timeline, Location == "STW" & Gene == "phnW")
+ano.stw.X <- subset(mots.timeline, Location == "STW" & Gene == "phnX")
+ano.stw.Y <- subset(mots.timeline, Location == "STW" & Gene == "phnY")
+ano.stw.Z <- subset(mots.timeline, Location == "STW" & Gene == "phnZ")
+ano.stw.PAL <- subset(mots.timeline, Location == "STW" & Gene == "palA")
+
+ano.stw.I <- subset(mots.timeline, Location == "STW" & Gene == "phnI")
+ano.stw.J <- subset(mots.timeline, Location == "STW" & Gene == "phnJ")
+ano.stw.M <- subset(mots.timeline, Location == "STW" & Gene == "phnM")
+
+
+###SAW###
+ano.saw.PEP <- subset(mots.timeline, Location == "SAW" & Gene == "pepM")
+ano.saw.AEP <- subset(mots.timeline, Location == "SAW" & Gene == "aepY")
+ano.saw.PHP <- subset(mots.timeline, Location == "SAW" & Gene == "phpC")
+ano.saw.MP <- subset(mots.timeline, Location == "SAW" & Gene == "mpnS")
+ano.saw.HEP <- subset(mots.timeline, Location == "SAW" & Gene == "hepD")
+
+ano.saw.A <- subset(mots.timeline, Location == "SAW" & Gene == "phnA")
+ano.saw.W <- subset(mots.timeline, Location == "SAW" & Gene == "phnW")
+ano.saw.X <- subset(mots.timeline, Location == "SAW" & Gene == "phnX")
+ano.saw.Y <- subset(mots.timeline, Location == "SAW" & Gene == "phnY")
+ano.saw.Z <- subset(mots.timeline, Location == "SAW" & Gene == "phnZ")
+ano.saw.PAL <- subset(mots.timeline, Location == "SAW" & Gene == "palA")
+
+ano.saw.I <- subset(mots.timeline, Location == "SAW" & Gene == "phnI")
+ano.saw.J <- subset(mots.timeline, Location == "SAW" & Gene == "phnJ")
+ano.saw.M <- subset(mots.timeline, Location == "SAW" & Gene == "phnM")
+
+
+###SAW-MES###
+ano.mes.PEP <- subset(mots.timeline, Location == "SAW-MES" & Gene == "pepM")
+ano.mes.AEP <- subset(mots.timeline, Location == "SAW-MES" & Gene == "aepY")
+ano.mes.PHP <- subset(mots.timeline, Location == "SAW-MES" & Gene == "phpC")
+ano.mes.MP <- subset(mots.timeline, Location == "SAW-MES" & Gene == "mpnS")
+ano.mes.HEP <- subset(mots.timeline, Location == "SAW-MES" & Gene == "hepD")
+
+ano.mes.A <- subset(mots.timeline, Location == "SAW-MES" & Gene == "phnA")
+ano.mes.W <- subset(mots.timeline, Location == "SAW-MES" & Gene == "phnW")
+ano.mes.X <- subset(mots.timeline, Location == "SAW-MES" & Gene == "phnX")
+ano.mes.Y <- subset(mots.timeline, Location == "SAW-MES" & Gene == "phnY")
+ano.mes.Z <- subset(mots.timeline, Location == "SAW-MES" & Gene == "phnZ")
+ano.mes.PAL <- subset(mots.timeline, Location == "SAW-MES" & Gene == "palA")
+
+ano.mes.I <- subset(mots.timeline, Location == "SAW-MES" & Gene == "phnI")
+ano.mes.J <- subset(mots.timeline, Location == "SAW-MES" & Gene == "phnJ")
+ano.mes.M <- subset(mots.timeline, Location == "SAW-MES" & Gene == "phnM")
+```
+
+```{r MOTS ANOVA seasonality workspace}
+#Aggregate for % diff b/t seasons
+seasonal.change <- aggregate(ano.stw.X, by=list(ano.stw.X$Season), FUN=mean)
+((seasonal.change[2,7]-seasonal.change[1,7])/seasonal.change[1,7])*100
+
+#ANOVA to compare Summer vs. Winter for each gene @ each location
+aov1 <- aov(Abundance~Season, data = ano.stw.X)
+anova(aov1)
+
+#Aggregate for % diff b/t seasons
+seasonal.change1 <- aggregate(ano.saw.X, by=list(ano.saw.X$Season), FUN=mean)
+((seasonal.change1[2,7]-seasonal.change1[1,7])/seasonal.change1[1,7])*100
+
+#ANOVA to compare Summer vs. Winter for each gene @ each location
+aov2 <- aov(Abundance~Season, data = ano.saw.X)
+anova(aov2)
+
+#Aggregate for % diff b/t seasons
+seasonal.change2 <- aggregate(ano.mes.X, by=list(ano.mes.X$Season), FUN=mean)
+((seasonal.change2[2,7]-seasonal.change2[1,7])/seasonal.change2[1,7])*100
+
+#ANOVA to compare Summer vs. Winter for each gene @ each location
+aov3 <- aov(Abundance~Season, data = ano.mes.X)
+anova(aov3)
+```
+
+```{r MOTS ANOVA Location set-up}
+#Subset by gene/double location
+### Surface comparison STW vs. SAW ###
+ano.ta.PEP <- subset(mots.timeline, Location != "SAW-MES" & Gene == "pepM")
+ano.ta.AEP <- subset(mots.timeline, Location != "SAW-MES" & Gene == "aepY")
+ano.ta.PHP <- subset(mots.timeline, Location != "SAW-MES" & Gene == "phpC")
+ano.ta.MP <- subset(mots.timeline, Location != "SAW-MES" & Gene == "mpnS")
+ano.ta.HEP <- subset(mots.timeline, Location != "SAW-MES" & Gene == "hepD")
+
+ano.ta.A <- subset(mots.timeline, Location != "SAW-MES" & Gene == "phnA")
+ano.ta.W <- subset(mots.timeline, Location != "SAW-MES" & Gene == "phnW")
+ano.ta.X <- subset(mots.timeline, Location != "SAW-MES" & Gene == "phnX")
+ano.ta.Y <- subset(mots.timeline, Location != "SAW-MES" & Gene == "phnY")
+ano.ta.Z <- subset(mots.timeline, Location != "SAW-MES" & Gene == "phnZ")
+ano.ta.PAL <- subset(mots.timeline, Location != "SAW-MES" & Gene == "palA")
+
+ano.ta.I <- subset(mots.timeline, Location != "SAW-MES" & Gene == "phnI")
+ano.ta.J <- subset(mots.timeline, Location != "SAW-MES" & Gene == "phnJ")
+ano.ta.M <- subset(mots.timeline, Location != "SAW-MES" & Gene == "phnM")
+
+### Surface/deep comparison SAW vs. SAW-MES ###
+ano.am.PEP <- subset(mots.timeline, Location != "STW" & Gene == "pepM")
+ano.am.AEP <- subset(mots.timeline, Location != "STW" & Gene == "aepY")
+ano.am.PHP <- subset(mots.timeline, Location != "STW" & Gene == "phpC")
+ano.am.MP <- subset(mots.timeline, Location != "STW" & Gene == "mpnS")
+ano.am.HEP <- subset(mots.timeline, Location != "STW" & Gene == "hepD")
+
+ano.am.A <- subset(mots.timeline, Location != "STW" & Gene == "phnA")
+ano.am.W <- subset(mots.timeline, Location != "STW" & Gene == "phnW")
+ano.am.X <- subset(mots.timeline, Location != "STW" & Gene == "phnX")
+ano.am.Y <- subset(mots.timeline, Location != "STW" & Gene == "phnY")
+ano.am.Z <- subset(mots.timeline, Location != "STW" & Gene == "phnZ")
+ano.am.PAL <- subset(mots.timeline, Location != "STW" & Gene == "palA")
+
+ano.am.I <- subset(mots.timeline, Location != "STW" & Gene == "phnI")
+ano.am.J <- subset(mots.timeline, Location != "STW" & Gene == "phnJ")
+ano.am.M <- subset(mots.timeline, Location != "STW" & Gene == "phnM")
+
+### For the sake of doing it, STW vs. SAW-MES ###
+ano.tm.PEP <- subset(mots.timeline, Location != "SAW" & Gene == "pepM")
+ano.tm.AEP <- subset(mots.timeline, Location != "SAW" & Gene == "aepY")
+ano.tm.PHP <- subset(mots.timeline, Location != "SAW" & Gene == "phpC")
+ano.tm.MP <- subset(mots.timeline, Location != "SAW" & Gene == "mpnS")
+ano.tm.HEP <- subset(mots.timeline, Location != "SAW" & Gene == "hepD")
+
+ano.tm.A <- subset(mots.timeline, Location != "SAW" & Gene == "phnA")
+ano.tm.W <- subset(mots.timeline, Location != "SAW" & Gene == "phnW")
+ano.tm.X <- subset(mots.timeline, Location != "SAW" & Gene == "phnX")
+ano.tm.Y <- subset(mots.timeline, Location != "SAW" & Gene == "phnY")
+ano.tm.Z <- subset(mots.timeline, Location != "SAW" & Gene == "phnZ")
+ano.tm.PAL <- subset(mots.timeline, Location != "SAW" & Gene == "palA")
+
+ano.tm.I <- subset(mots.timeline, Location != "SAW" & Gene == "phnI")
+ano.tm.J <- subset(mots.timeline, Location != "SAW" & Gene == "phnJ")
+ano.tm.M <- subset(mots.timeline, Location != "SAW" & Gene == "phnM")
+```
+
+```{r ANOVA location workspace, warning = FALSE}
+### STW --> SAW ###
+#Aggregate for % diff b/t seasons
+loc.change1 <- aggregate(ano.ta.M, by=list(ano.ta.M$Location), FUN=mean)
+((loc.change1[1,7]-loc.change1[2,7])/loc.change1[2,7])*100
+
+#ANOVA to compare STW vs SAW for each gene @ each location
+aov11 <- aov(Abundance~Location, data = ano.ta.M)
+anova(aov11)
+
+## SAW --> SAW-MES ###
+#Aggregate for % diff b/t seasons
+loc.change2 <- aggregate(ano.am.M, by=list(ano.am.M$Location), FUN=mean)
+((loc.change2[2,7]-loc.change2[1,7])/loc.change2[1,7])*100
+
+#ANOVA to compare SAW vs SAW-MES for each gene @ each location
+aov22 <- aov(Abundance~Location, data = ano.am.M)
+anova(aov22)
+
+## STW --> SAW-MES ###
+#Aggregate for % diff b/t seasons
+loc.change3 <- aggregate(ano.tm.M, by=list(ano.tm.M$Location), FUN=mean)
+((loc.change3[1,7]-loc.change3[2,7])/loc.change3[2,7])*100
+
+#ANOVA to compare STW vs SAW-MES for each gene @ each location
+aov33 <- aov(Abundance~Location, data = ano.tm.M)
+anova(aov33)
+```
+
+
+#Linear regression of Pi vs Phn cycling gene abundance - Supporting statistics for Figure 6
+```{r Import data with phyloseq}
+#OTU table
+pho.otu.csv <- read.csv(file="*/pho_data/phos_otu.csv", header = TRUE, na.strings = "unclassified", fileEncoding="UTF-8-BOM", check.names = FALSE)
+pho.otu <- as.matrix(pho.otu.csv)
+rownames(pho.otu) <- paste0(1:nrow(pho.otu))
+pho.otu <- otu_table(pho.otu, taxa_are_rows = TRUE)
+
+#Taxa table
+pho.taxa.csv <- read.csv(file="*/pho_data/phos_taxa.csv", header = TRUE, na.strings = "unclassified", fileEncoding="UTF-8-BOM", check.names = FALSE)
+pho.taxa <- as.matrix(pho.taxa.csv)
+rownames(pho.taxa) <- paste0(1:nrow(pho.taxa))
+pho.taxa1 <- tax_table(pho.taxa)
+
+#Meta-data
+pho.sample.meta <- read.csv(file="*/pho_data/phos_meta.csv", header = TRUE, fileEncoding="UTF-8-BOM", check.names = FALSE)
+pho.meta <- as.data.frame(pho.sample.meta)
+pho.meta11 <- pho.meta[,-1]
+rownames(pho.meta11) <- pho.meta$Sample_ID
+pho.meta.1 <- sample_data(pho.meta11)
+
+#Create phyloseq object abundance
+pho.abu <- phyloseq(pho.otu, pho.taxa1, pho.meta.1)
+
+#Melt phyloseq object for figure-making df
+pho.full <- psmelt(pho.abu)
+```
+
+```{r Data prep}
+#Sum Abundance by Time/Location/Species
+pho.regression1 <- aggregate(pho.full$Abundance, 
+                           by=list(
+                             Sample = pho.full$Sample,
+                             Location = pho.full$Location,
+                             Depth = pho.full$Depth,
+                             Activity = pho.full$Genus,
+                             Gene = pho.full$Species,
+                             Phosphate = pho.full$Phosphate
+                           ), FUN=sum)
+
+pho.regression <- summarySE(pho.regression1, "x", groupvars = c("Gene", "Location", "Depth", "Activity", "Phosphate"))
+
+#Header label for Abundance
+colnames(pho.regression)[7] <- "Abundance"
+
+#Set Activity factor order
+pho.regression$Activity <- factor(pho.regression$Activity, levels = c("Production", "Substrate-specific Catabolism", "Broad-specificity Catabolism"))
+
+#Reorder genes
+levels(pho.regression$Gene)
+pho.regression$Gene <- factor(pho.regression$Gene, levels = c("pepM", "aepY", "phpC", "hepD", "mpnS", "phnW", "phnY", "phnA", "phnX", "phnZ", "palA", "phnI", "phnJ", "phnM"))
+```
+
+```{r Surface regression}
+#Subset data based on Gene + Location
+pho.reg.p <- subset(pho.regression, Gene == "pepM" & Depth == "SUR")
+pho.reg.b <- subset(pho.regression, Gene == "aepY" & Depth == "SUR")
+pho.reg.c <- subset(pho.regression, Gene == "phpC" & Depth == "SUR")
+pho.reg.s <- subset(pho.regression, Gene == "mpnS" & Depth == "SUR")
+pho.reg.h <- subset(pho.regression, Gene == "hepD" & Depth == "SUR")
+
+pho.reg.a <- subset(pho.regression, Gene == "phnA" & Depth == "SUR")
+pho.reg.w <- subset(pho.regression, Gene == "phnW" & Depth == "SUR")
+pho.reg.x <- subset(pho.regression, Gene == "phnX" & Depth == "SUR")
+pho.reg.y <- subset(pho.regression, Gene == "phnY" & Depth == "SUR")
+pho.reg.z <- subset(pho.regression, Gene == "phnZ" & Depth == "SUR")
+pho.reg.l <- subset(pho.regression, Gene == "palA" & Depth == "SUR")
+
+pho.reg.i <- subset(pho.regression, Gene == "phnI" & Depth == "SUR")
+pho.reg.j <- subset(pho.regression, Gene == "phnJ" & Depth == "SUR")
+pho.reg.m <- subset(pho.regression, Gene == "phnM" & Depth == "SUR")
+
+#Transform data
+pho.reg.p$Abundance.log <- log(pho.reg.p$Abundance)
+pho.reg.p$Phosphate.log <- log(pho.reg.p$Phosphate + 0.01)
+pho.reg.b$Abundance.log <- log(pho.reg.b$Abundance)
+pho.reg.b$Phosphate.log <- log(pho.reg.b$Phosphate + 0.01)
+pho.reg.c$Abundance.log <- log(pho.reg.c$Abundance)
+pho.reg.c$Phosphate.log <- log(pho.reg.c$Phosphate + 0.01)
+pho.reg.s$Abundance.log <- log(pho.reg.s$Abundance)
+pho.reg.s$Phosphate.log <- log(pho.reg.s$Phosphate + 0.01)
+pho.reg.h$Abundance.log <- log(pho.reg.h$Abundance)
+pho.reg.h$Phosphate.log <- log(pho.reg.h$Phosphate + 0.01)
+
+pho.reg.a$Abundance.log <- log(pho.reg.a$Abundance)
+pho.reg.a$Phosphate.log <- log(pho.reg.a$Phosphate + 0.01)
+pho.reg.w$Abundance.log <- log(pho.reg.w$Abundance)
+pho.reg.w$Phosphate.log <- log(pho.reg.w$Phosphate + 0.01)
+pho.reg.x$Abundance.log <- log(pho.reg.x$Abundance + 0.01)
+pho.reg.x$Phosphate.log <- log(pho.reg.x$Phosphate + 0.01)
+pho.reg.y$Abundance.log <- log(pho.reg.y$Abundance)
+pho.reg.y$Phosphate.log <- log(pho.reg.y$Phosphate + 0.01)
+pho.reg.z$Abundance.log <- log(pho.reg.z$Abundance)
+pho.reg.z$Phosphate.log <- log(pho.reg.z$Phosphate + 0.01)
+pho.reg.l$Abundance.log <- log(pho.reg.l$Abundance)
+pho.reg.l$Phosphate.log <- log(pho.reg.l$Phosphate + 0.01)
+
+pho.reg.i$Abundance.log <- log(pho.reg.i$Abundance)
+pho.reg.i$Phosphate.log <- log(pho.reg.i$Phosphate + 0.01)
+pho.reg.j$Abundance.log <- log(pho.reg.j$Abundance)
+pho.reg.j$Phosphate.log <- log(pho.reg.j$Phosphate + 0.01)
+pho.reg.m$Abundance.log <- log(pho.reg.m$Abundance)
+pho.reg.m$Phosphate.log <- log(pho.reg.m$Phosphate + 0.01)
+
+#Create linear model
+lm.sur.p <- lm(Phosphate.log~Abundance.log, data=pho.reg.p)
+lm.sur.b <- lm(Phosphate.log~Abundance.log, data=pho.reg.b)
+lm.sur.c <- lm(Phosphate.log~Abundance.log, data=pho.reg.c)
+lm.sur.s <- lm(Phosphate.log~Abundance.log, data=pho.reg.s)
+lm.sur.h <- lm(Phosphate.log~Abundance.log, data=pho.reg.h)
+
+lm.sur.a <- lm(Phosphate.log~Abundance.log, data=pho.reg.a)
+lm.sur.w <- lm(Phosphate.log~Abundance.log, data=pho.reg.w)
+lm.sur.x <- lm(Phosphate.log~Abundance.log, data=pho.reg.x)
+lm.sur.y <- lm(Phosphate.log~Abundance.log, data=pho.reg.y)
+lm.sur.z <- lm(Phosphate.log~Abundance.log, data=pho.reg.z)
+lm.sur.l <- lm(Phosphate.log~Abundance.log, data=pho.reg.l)
+
+lm.sur.i <- lm(Phosphate.log~Abundance.log, data=pho.reg.i)
+lm.sur.j <- lm(Phosphate.log~Abundance.log, data=pho.reg.j)
+lm.sur.m <- lm(Phosphate.log~Abundance.log, data=pho.reg.m)
+
+#lm.sur.m
+#summary(lm.sur.m)
+```
+
+```{r Data transformation}
+#Subset data based on Gene + Location
+pho.mes.reg.pp <- subset(pho.mes.regression, Gene == "pepM" & Depth == "MES")
+pho.mes.reg.p <- subset(pho.mes.reg.pp, Phosphate > 0.2)
+pho.mes.reg.bb <- subset(pho.mes.regression, Gene == "aepY" & Depth == "MES")
+pho.mes.reg.b <- subset(pho.mes.reg.bb, Phosphate > 0.2)
+pho.mes.reg.cc <- subset(pho.mes.regression, Gene == "phpC" & Depth == "MES")
+pho.mes.reg.c <- subset(pho.mes.reg.cc, Phosphate > 0.2)
+pho.mes.reg.ss <- subset(pho.mes.regression, Gene == "mpnS" & Depth == "MES")
+pho.mes.reg.s <- subset(pho.mes.reg.ss, Phosphate > 0.2)
+pho.mes.reg.hh <- subset(pho.mes.regression, Gene == "hepD" & Depth == "MES")
+pho.mes.reg.h <- subset(pho.mes.reg.hh, Phosphate > 0.2)
+
+pho.mes.reg.aa <- subset(pho.mes.regression, Gene == "phnA" & Depth == "MES")
+pho.mes.reg.a <- subset(pho.mes.reg.aa, Phosphate > 0.2)
+pho.mes.reg.ww <- subset(pho.mes.regression, Gene == "phnW" & Depth == "MES")
+pho.mes.reg.w <- subset(pho.mes.reg.ww, Phosphate > 0.2)
+pho.mes.reg.xx <- subset(pho.mes.regression, Gene == "phnX" & Depth == "MES")
+pho.mes.reg.x <- subset(pho.mes.reg.xx, Phosphate > 0.2)
+pho.mes.reg.yy <- subset(pho.mes.regression, Gene == "phnY" & Depth == "MES")
+pho.mes.reg.y <- subset(pho.mes.reg.yy, Phosphate > 0.2)
+pho.mes.reg.zz <- subset(pho.mes.regression, Gene == "phnZ" & Depth == "MES")
+pho.mes.reg.z <- subset(pho.mes.reg.zz, Phosphate > 0.2)
+pho.mes.reg.ll <- subset(pho.mes.regression, Gene == "palA" & Depth == "MES")
+pho.mes.reg.l <- subset(pho.mes.reg.ll, Phosphate > 0.2)
+
+pho.mes.reg.ii <- subset(pho.mes.regression, Gene == "phnI" & Depth == "MES")
+pho.mes.reg.i <- subset(pho.mes.reg.ii, Phosphate > 0.2)
+pho.mes.reg.jj <- subset(pho.mes.regression, Gene == "phnJ" & Depth == "MES")
+pho.mes.reg.j <- subset(pho.mes.reg.jj, Phosphate > 0.2)
+pho.mes.reg.mm <- subset(pho.mes.regression, Gene == "phnM" & Depth == "MES")
+pho.mes.reg.m <- subset(pho.mes.reg.mm, Phosphate > 0.2)
+
+#Transform data
+pho.mes.reg.p$Abundance.log <- log(pho.mes.reg.p$Abundance)
+pho.mes.reg.p$Phosphate.log <- log(pho.mes.reg.p$Phosphate + 0.01)
+pho.mes.reg.b$Abundance.log <- log(pho.mes.reg.b$Abundance)
+pho.mes.reg.b$Phosphate.log <- log(pho.mes.reg.b$Phosphate + 0.01)
+pho.mes.reg.c$Abundance.log <- log(pho.mes.reg.c$Abundance)
+pho.mes.reg.c$Phosphate.log <- log(pho.mes.reg.c$Phosphate + 0.01)
+pho.mes.reg.s$Abundance.log <- log(pho.mes.reg.s$Abundance)
+pho.mes.reg.s$Phosphate.log <- log(pho.mes.reg.s$Phosphate + 0.01)
+pho.mes.reg.h$Abundance.log <- log(pho.mes.reg.h$Abundance)
+pho.mes.reg.h$Phosphate.log <- log(pho.mes.reg.h$Phosphate + 0.01)
+
+pho.mes.reg.a$Abundance.log <- log(pho.mes.reg.a$Abundance)
+pho.mes.reg.a$Phosphate.log <- log(pho.mes.reg.a$Phosphate + 0.01)
+pho.mes.reg.w$Abundance.log <- log(pho.mes.reg.w$Abundance)
+pho.mes.reg.w$Phosphate.log <- log(pho.mes.reg.w$Phosphate + 0.01)
+pho.mes.reg.x$Abundance.log <- log(pho.mes.reg.x$Abundance)
+pho.mes.reg.x$Phosphate.log <- log(pho.mes.reg.x$Phosphate + 0.01)
+pho.mes.reg.y$Abundance.log <- log(pho.mes.reg.y$Abundance)
+pho.mes.reg.y$Phosphate.log <- log(pho.mes.reg.y$Phosphate + 0.01)
+pho.mes.reg.z$Abundance.log <- log(pho.mes.reg.z$Abundance)
+pho.mes.reg.z$Phosphate.log <- log(pho.mes.reg.z$Phosphate + 0.01)
+pho.mes.reg.l$Abundance.log <- log(pho.mes.reg.l$Abundance)
+pho.mes.reg.l$Phosphate.log <- log(pho.mes.reg.l$Phosphate + 0.01)
+
+pho.mes.reg.i$Abundance.log <- log(pho.mes.reg.i$Abundance + 0.01)
+pho.mes.reg.i$Phosphate.log <- log(pho.mes.reg.i$Phosphate + 0.01)
+pho.mes.reg.j$Abundance.log <- log(pho.mes.reg.j$Abundance + 0.01)
+pho.mes.reg.j$Phosphate.log <- log(pho.mes.reg.j$Phosphate + 0.01)
+pho.mes.reg.m$Abundance.log <- log(pho.mes.reg.m$Abundance)
+pho.mes.reg.m$Phosphate.log <- log(pho.mes.reg.m$Phosphate + 0.01)
+
+#Create linear model
+lm.mes.p <- lm(Phosphate.log~Abundance.log, data=pho.mes.reg.p)
+lm.mes.b <- lm(Phosphate.log~Abundance.log, data=pho.mes.reg.b)
+lm.mes.c <- lm(Phosphate.log~Abundance.log, data=pho.mes.reg.c)
+lm.mes.s <- lm(Phosphate.log~Abundance.log, data=pho.mes.reg.s)
+lm.mes.h <- lm(Phosphate.log~Abundance.log, data=pho.mes.reg.h)
+
+lm.mes.a <- lm(Phosphate.log~Abundance.log, data=pho.mes.reg.a)
+lm.mes.w <- lm(Phosphate.log~Abundance.log, data=pho.mes.reg.w)
+lm.mes.x <- lm(Phosphate.log~Abundance.log, data=pho.mes.reg.x)
+lm.mes.y <- lm(Phosphate.log~Abundance.log, data=pho.mes.reg.y)
+lm.mes.z <- lm(Phosphate.log~Abundance.log, data=pho.mes.reg.z)
+lm.mes.l <- lm(Phosphate.log~Abundance.log, data=pho.mes.reg.l)
+
+lm.mes.i <- lm(Phosphate.log~Abundance.log, data=pho.mes.reg.i)
+lm.mes.j <- lm(Phosphate.log~Abundance.log, data=pho.mes.reg.j)
+lm.mes.m <- lm(Phosphate.log~Abundance.log, data=pho.mes.reg.m)
+
+#lm.mes.m
+#summary(lm.mes.m)
+```
+
+
+
+
+
+
+
+
+
+
+#NMDS (Bray-Curtis dissimilarity) and ANOSIM - Supporting statistics for Supplementary Figure S12
+```{r Phyloseq Load}
+#OTU table
+mots.otu.csv <- read.csv(file="*/mots_data/mots_otu.csv", header = TRUE, na.strings = "unclassified", fileEncoding="UTF-8-BOM", check.names = FALSE)
+mots.otu <- as.matrix(mots.otu.csv)
+rownames(mots.otu) <- paste0(1:nrow(mots.otu))
+mots.otu <- otu_table(mots.otu, taxa_are_rows = TRUE)
+
+#Taxa table
+mots.taxa.csv <- read.csv(file="*/mots_data/mots_taxa.csv", header = TRUE, na.strings = "unclassified", fileEncoding="UTF-8-BOM", check.names = FALSE)
+mots.taxa <- as.matrix(mots.taxa.csv)
+rownames(mots.taxa) <- paste0(1:nrow(mots.taxa))
+mots.taxa1 <- tax_table(mots.taxa)
+
+#Meta-data
+mots.sample.meta <- read.csv(file="*/mots_data/mots_meta.csv", header = TRUE, fileEncoding="UTF-8-BOM", check.names = FALSE)
+mots.meta <- as.data.frame(mots.sample.meta)
+mots.meta11 <- mots.meta[,-1]
+rownames(mots.meta11) <- mots.meta$Sample_ID
+mots.meta.1 <- sample_data(mots.meta11)
+
+#fix sample names...........
+sample_names(mots.otu) <- seq(from=1, to=21, by=1)
+sample_names(mots.meta.1) <- seq(from=1, to=21, by=1)
+
+#Create phyloseq object abundance
+mots.abu <- phyloseq(mots.otu, mots.taxa1, mots.meta.1)
+
+#Adjust date order
+sample_data(mots.abu)$Time = factor(sample_data(mots.abu)$Time, levels = c("W '14", "S '14", "W '15", "S '15", "W '16", "S '17", "W '17"))
+```
+
+```{r NMDS}
+#Act directly on phyloseq object
+mots.ord <- ordinate(mots.abu, "NMDS", "bray")
+
+mots.ord
+#Stress = 0.04912137 (excellent representation)
+
+sample_data(mots.abu)$Location = factor(sample_data(mots.abu)$Location, levels = c("STW", "SAW", "SAW-MES"))
+```
+
+```{r ANOSIM}
+#ANOSIM - Depth
+mots.phy.de <- get_variable(mots.abu, "Depth")
+mots.phy.anosim.de = anosim(phyloseq::distance(mots.abu, "bray"), mots.phy.de)
+
+mots.phy.anosim.de$signif #       p < 0.001
+mots.phy.anosim.de$statistic #    R = 0.8547741
+
+#ANOSIM - Watermass
+mots.phy.d <- get_variable(mots.abu, "Location")
+mots.phy.anosim.wm = anosim(phyloseq::distance(mots.abu, "bray"), mots.phy.d)
+
+mots.phy.anosim.wm$signif #       p < 0.001
+mots.phy.anosim.wm$statistic #    R = 0.660799
+
+#ANOSIM - Season
+mots.phy.s <- get_variable(mots.abu, "Season")
+mots.phy.anosim.season = anosim(phyloseq::distance(mots.abu, "bray"), mots.phy.s)
+
+mots.phy.anosim.season$signif #       p < 0.015
+mots.phy.anosim.season$statistic #    R = 0.2363834
+
+
+##################
+###Exclude Deep###
+##################
+
+mots.sur <- subset_samples(mots.abu, Depth == "Surface")
+
+#ANOSIM - Watermass
+mots.phy.d.s <- get_variable(mots.sur, "Location")
+mots.phy.anosim.wm.s = anosim(phyloseq::distance(mots.sur, "bray"), mots.phy.d.s)
+
+mots.phy.anosim.wm.s$signif #       p < 0.192
+mots.phy.anosim.wm.s$statistic #    R = 0.06316812
+
+#ANOSIM - Season
+mots.phy.s.s <- get_variable(mots.sur, "Season")
+mots.phy.anosim.season.s = anosim(phyloseq::distance(mots.sur, "bray"), mots.phy.s.s)
+
+mots.phy.anosim.season.s$signif #       p < 0.001
+mots.phy.anosim.season.s$statistic #    R = 0.8284884
+```
+
+
+
+
