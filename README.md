@@ -1,6 +1,6 @@
 # Lockwood-et-al.-2022
 Code and data for statistical analysis in the manuscript: "Global and seasonal variation of marine phosphonate metabolism" Lockwood et al. 2022 
-\n
+
 Description of files:
 Lockwood_2022_statistical_analysis.Rmd - R code for all stats performed
 shannon_diversity - input data for Shannon diversity analysis on phosphonate gene databases
