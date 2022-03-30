@@ -3,7 +3,7 @@ Code and data for statistical analysis in the manuscript: "Global and seasonal v
 
 Description of files:
 
-Lockwood_2022_statistical_analysis.Rmd - R code for all stats performed
+Lockwood_2022_statistical_analysis.Rmd - R code for all statistical analyses
 
 shannon_diversity - input data for Shannon diversity analysis on phosphonate gene databases
 
